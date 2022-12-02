@@ -1,0 +1,25 @@
+{
+  "name": "dotabuff-parser",
+  "version": "1.0.0",
+  "description": "Store dotabuff info in local db",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BogdanYarotsky/dotabuff-parser.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BogdanYarotsky/dotabuff-parser/issues"
+  },
+  "homepage": "https://github.com/BogdanYarotsky/dotabuff-parser#readme",
+  "dependencies": {
+    "puppeteer": "^19.3.0",
+    "puppeteer-extra": "^3.3.4",
+    "puppeteer-extra-plugin-adblocker": "^2.13.5",
+    "puppeteer-extra-plugin-stealth": "^2.11.1"
+  }
+}
