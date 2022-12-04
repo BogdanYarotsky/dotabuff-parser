@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/BogdanYarotsky/dotabuff-parser#readme",
   "dependencies": {
+    "@types/pg": "^8.6.5",
+    "pg": "^8.8.0",
     "puppeteer": "^19.3.0",
     "puppeteer-extra": "^3.3.4",
     "puppeteer-extra-plugin-adblocker": "^2.13.5",
