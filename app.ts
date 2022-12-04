@@ -14,7 +14,6 @@ const rowSelector = "article > table > tbody > tr";
 const winrateSelector =
   "body > div.container-outer.seemsgood > div.skin-container > div.container-inner.container-inner-content > div.header-content-container > div.header-content > div.header-content-secondary > dl:nth-child(2) > dd > span";
 const nameSelector = "h1";
-
 const heroNames = ["slark", "troll-warlord", "lone-druid", "naga-siren"];
 
 (async function main() {
@@ -79,20 +78,8 @@ interface DbItem extends DbEntry {
 }
 
 async function SaveInDatabase(heroes: HeroInfo[]) {
-  const db = new Db({
-    user: "postgres",
-    database: "dota",
-    password: "password1337",
-  });
-
-  await db.connect();
-
-  // create update
-  const updateInsert = (await db.query(
-    "INSERT INTO dotabuff_updates(timestamp) VALUES(current_timestamp) RETURNING id"
-  )) as QueryResult<DbEntry>;
-
-  await SaveAsDotabuffUpdate(db, updateInsert.rows[0], heroes);
+  const db = await StartDbConnection();
+  await SaveAsDotabuffUpdate(db, heroes);
   await db.end();
 }
 
@@ -111,11 +98,14 @@ async function GetHeroesInfo(browser: Browser, heroNames: string[]) {
   return heroes;
 }
 
-async function SaveAsDotabuffUpdate(
-  db: Db,
-  update: DbEntry,
-  heroes: HeroInfo[]
-) {
+async function SaveAsDotabuffUpdate(db: Db, heroes: HeroInfo[]) {
+  // get id of update
+  const updateInsert = (await db.query(
+    "INSERT INTO dotabuff_updates(timestamp) VALUES(current_timestamp) RETURNING id"
+  )) as QueryResult<DbEntry>;
+  const updateId = updateInsert.rows[0].id;
+
+  // get all items to map later
   const dbItems = (await db.query(
     "SELECT id, name, localized_name FROM items WHERE recipe IS FALSE"
   )) as QueryResult<DbItem>;
@@ -123,7 +113,7 @@ async function SaveAsDotabuffUpdate(
   const dbDagons = dbItems.rows.filter(i => i.localized_name == "Dagon");
 
   for (const hero of heroes) {
-    // find hero id
+    // get hero game_id based on name
     const heroIds = (await db.query(
       "SELECT id FROM heroes WHERE localized_name = $1",
       [hero.name]
@@ -132,7 +122,7 @@ async function SaveAsDotabuffUpdate(
     // insert dotabuff_hero
     const dbHeroInsert = (await db.query(
       "INSERT INTO dotabuff_heroes(update_id, game_id, winrate) VALUES($1, $2, $3) RETURNING id",
-      [update.id, heroIds.rows[0].id, hero.winrate]
+      [updateId, heroIds.rows[0].id, hero.winrate]
     )) as QueryResult<DbEntry>;
 
     // insert dotabuff_items
@@ -140,7 +130,6 @@ async function SaveAsDotabuffUpdate(
       .filter(i => !i.name.startsWith("Recipe"))
       .map(i => {
         let itemId: number;
-
         if (i.name.startsWith("Dagon")) {
           // find number from i.name
           const dagonNum = i.name.slice(-2)[0];
@@ -172,13 +161,23 @@ async function SaveAsDotabuffUpdate(
         );
       });
 
-    var tasks = itemsToInsert.map(i => {
+    var queries = itemsToInsert.map(i => {
       return db.query(
         "INSERT INTO dotabuff_items(hero_id, game_id, matches, winrate) VALUES($1, $2, $3, $4)",
         [i.hero_id, i.game_id, i.matches, i.winrate]
       );
     });
 
-    await Promise.all(tasks);
+    await Promise.all(queries);
   }
+}
+
+async function StartDbConnection() {
+  const db = new Db({
+    user: "postgres",
+    database: "dota",
+    password: "password1337",
+  });
+  await db.connect();
+  return db;
 }
